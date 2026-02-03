@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>News Globe – MapLibre</title>
+
+  <link
+    href="https://unpkg.com/maplibre-gl@5.7.0/dist/maplibre-gl.css"
+    rel="stylesheet"
+  />
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+    }
+
+    #map {
+      position: fixed;
+      inset: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/maplibre-gl@5.7.0/dist/maplibre-gl.js"></script>
+
+  <script>
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: './news-globe.json',
+      center: [0, 5],
+      zoom: 3.0,
+      pitch: 5,
+      bearing: 0,
+      antialias: true
+    });
+
+    // ===== Fog（视觉）=====
+    map.on('style.load', () => {
+      map.setFog({
+        'horizon-blend': 0.12,
+        'color': '#eef2f4',
+        'high-color': '#f7f9fa',
+        'space-color': '#e6ebee',
+        'star-intensity': 0
+      });
+    });
+
+    // ===== 自动自转控制 =====
+    const degreesPerFrame = 0.02; // 转速
+    let spinning = true;
+    let spinRAF = null;
+
+    function spin() {
+      if (!spinning) return;
+
+      const c = map.getCenter();
+      let lng = c.lng + degreesPerFrame;
+      if (lng > 180) lng -= 360;
+
+      map.setCenter([lng, c.lat]);
+      spinRAF = requestAnimationFrame(spin);
+    }
+
+   map.on('load', () => {
+  spin(); // 一加载就转
+
+  // ===== 闪烁 + 呼吸放大动画 =====
+  const pulsePeriod = 2000; // 一个完整周期（ms）
+  let pulseStart = performance.now();
+
+  function animatePulse(now) {
+    if (map.getLayer('user-green-point')) {
+      const t = ((now - pulseStart) % pulsePeriod) / pulsePeriod; // 0..1
+      const wave = 0.5 * (1 + Math.sin(t * 2 * Math.PI)); // 0..1 平滑波形
+
+      // 透明度：0.3 → 1
+      const opacity = 0.3 + 0.7 * wave;
+
+      // 半径：6 → 12（呼吸感）
+      const radius = 3 + 6 * wave;
+
+      map.setPaintProperty('user-green-point', 'circle-opacity', opacity);
+      map.setPaintProperty('user-green-point', 'circle-radius', radius);
+    }
+
+    requestAnimationFrame(animatePulse);
+  }
+
+  requestAnimationFrame(animatePulse);
+});
+    // ===== 用户交互逻辑 =====
+
+    // 用户开始拖 → 停止自转
+    map.on('mousedown', () => {
+      spinning = false;
+      if (spinRAF) cancelAnimationFrame(spinRAF);
+    });
+
+    map.on('touchstart', () => {
+      spinning = false;
+      if (spinRAF) cancelAnimationFrame(spinRAF);
+    });
+
+    // 用户松手 → 过 1 秒再继续转（很“新闻感”）
+    function resumeSpinLater() {
+      setTimeout(() => {
+        if (!spinning) {
+          spinning = true;
+          spin();
+        }
+      }, 1000);
+    }
+
+    map.on('mouseup', resumeSpinLater);
+    map.on('touchend', resumeSpinLater);
+  </script>
+</body>
+</html>
