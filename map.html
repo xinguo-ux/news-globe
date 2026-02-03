@@ -35,8 +35,8 @@
       container: 'map',
       style: './news-globe.json',
       center: [0, 5],
-      zoom: 3.0,
-      pitch: 5,
+      zoom: 2.8,
+      pitch: 0,
       bearing: 0,
       antialias: true
     });
@@ -53,7 +53,7 @@
     });
 
     // ===== 自动自转控制 =====
-    const degreesPerFrame = 0.02; // 转速
+    const degreesPerFrame = 0.02; // 转速 
     let spinning = true;
     let spinRAF = null;
 
